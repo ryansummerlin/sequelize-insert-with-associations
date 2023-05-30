@@ -1,6 +1,7 @@
 // Instantiate Express and the application - DO NOT MODIFY
 const express = require('express');
 const app = express();
+const { Op } = require('sequelize');
 
 // Import environment variables in order to connect to database - DO NOT MODIFY
 require('dotenv').config();
@@ -15,13 +16,31 @@ app.use(express.json());
 
 // STEP 1: Creating from an associated model (One-to-Many)
 app.post('/bands/:bandId/musicians', async (req, res, next) => {
-    // Your code here
-})
+    const band = await Band.findOne({ where: { id: req.params.bandId } });
+    const firstName = req.body.firstName;
+    const lastName = req.body.lastName;
+
+    await band.createMusician({ firstName: firstName, lastName: lastName });
+    const musician = await Musician.findOne({ where: {
+        [Op.and]: [{ firstName: firstName }, { lastName: lastName }]
+    } });
+
+    res.json({ message: `Created new musician for band ${band.name}.`, musician: musician});
+});
 
 // STEP 2: Connecting two existing records (Many-to-Many)
 app.post('/musicians/:musicianId/instruments', async (req, res, next) => {
-    // Your code here
-})
+    const musician = await Musician.findOne({ where: { id: req.params.musicianId } });
+    const instrumentIds = req.body.instrumentIds;
+
+    const instruments = await Instrument.findAll({ where: { id: {
+        [Op.in]: instrumentIds
+    }}});
+
+    musician.addInstruments(instruments);
+
+    res.json({ message: `Associated ${musician.firstName} with instruments ${instrumentIds}.`});
+});
 
 
 // Get the details of one band and associated musicians - DO NOT MODIFY
